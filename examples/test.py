@@ -4,6 +4,7 @@ import pygame
 import time
 import signal
 import math
+from colorsys import hsv_to_rgb
 from hyperpixel2r import Touch
 
 
@@ -47,11 +48,7 @@ class Hyperpixel2r:
         size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
         print("Framebuffer size: {:d} x {:d}".format(*size))
         self.screen = pygame.display.set_mode((640, 480), pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE)
-        # Clear the screen to start
         self.screen.fill((0, 0, 0))        
-        # Initialise font support
-        pygame.font.init()
-        # Render the screen
         pygame.display.update()
 
         self._step = 0
@@ -83,6 +80,14 @@ class Hyperpixel2r:
             pygame.display.update()
             time.sleep(0.25)
 
+        for y in range(480):
+            hue = y / 480.0
+            colour = tuple([int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)])
+            pygame.draw.line(self.screen, colour, (0, y), (479, y))
+
+        pygame.display.update()
+        time.sleep(1.0)
+
         while self._step < len(self._steps):
             r, g, b, x, y = self._steps[self._step]
             pygame.draw.circle(self.screen, (r, g, b), (x, y), 90)
@@ -97,7 +102,6 @@ class Hyperpixel2r:
             self._step += 1
 
 
-# Create an instance of the PyScope class
 display = Hyperpixel2r()
 touch = Touch()
 
