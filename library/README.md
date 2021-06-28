@@ -1,6 +1,6 @@
 # HyperPixel 2" Round Touch Driver
 
-[![Build Status](https://travis-ci.com/pimoroni/hyperpixel2r-python.svg?branch=master)](https://travis-ci.com/pimoroni/hyperpixel2r-python)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/pimoroni/hyperpixel2r-python/Python%20Tests)](https://github.com/pimoroni/hyperpixel2r-python/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/pimoroni/hyperpixel2r-python/badge.svg?branch=master)](https://coveralls.io/github/pimoroni/hyperpixel2r-python?branch=master)
 [![PyPi Package](https://img.shields.io/pypi/v/hyperpixel2r.svg)](https://pypi.python.org/pypi/hyperpixel2r)
 [![Python Versions](https://img.shields.io/pypi/pyversions/hyperpixel2r.svg)](https://pypi.python.org/pypi/hyperpixel2r)
