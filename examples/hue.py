@@ -18,34 +18,8 @@ class Hyperpixel2r:
     screen = None
 
     def __init__(self):
-        # Based on "Python GUI in Linux frame buffer"
-        # http://www.karoltomala.com/blog/?p=679
-        disp_no = os.getenv("DISPLAY")
-        if disp_no:
-            print("I'm running under X display = {0}".format(disp_no))
+        self._init_display()
 
-        # Check which frame buffer drivers are available
-        # Start with fbcon since directfb hangs with composite output
-        drivers = ['fbcon', 'directfb', 'svgalib']
-        found = False
-        for driver in drivers:
-            # Make sure that SDL_VIDEODRIVER is set
-            if not os.getenv('SDL_VIDEODRIVER'):
-                os.putenv('SDL_VIDEODRIVER', driver)
-            try:
-                pygame.display.init()
-            except pygame.error:
-                print('Driver: {0} failed. ({1})'.format(driver, dir(pygame.error)))
-                continue
-            found = True
-            break
-
-        if not found:
-            raise Exception('No suitable video driver found!')
-
-        size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-        print("Framebuffer size: {:d} x {:d}".format(*size))
-        self.screen = pygame.display.set_mode((640, 480), pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
         self.screen.fill((0, 0, 0))
         pygame.display.update()
 
@@ -75,6 +49,36 @@ class Hyperpixel2r:
 
             colour = tuple([int(c * 255) for c in hsv_to_rgb(a / 360.0, 1.0, 1.0)])
             pygame.draw.line(self.screen, colour, (ox, oy), (x, y), 3)
+
+    def _init_display(self):
+        # Based on "Python GUI in Linux frame buffer"
+        # http://www.karoltomala.com/blog/?p=679
+        DISPLAY = os.getenv("DISPLAY")
+        if DISPLAY:
+            print("Display: {0}".format(DISPLAY))
+
+        if os.getenv('SDL_VIDEODRIVER'):
+            print("Using driver specified by SDL_VIDEODRIVER: {}".format(os.getenv('SDL_VIDEODRIVER')))
+            pygame.display.init()
+            self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+            return
+
+        else:
+            # Iterate through drivers and attempt to init/set_mode
+            for driver in ['rpi', 'kmsdrm', 'fbcon', 'directfb', 'svgalib']:
+                os.putenv('SDL_VIDEODRIVER', driver)
+                try:
+                    pygame.display.init()
+                    size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+                    self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+                    print("Using driver: {0}, Framebuffer size: {1:d} x {2:d}".format(driver, *size))
+                    return
+                except pygame.error as e:
+                    print('Driver "{0}" failed: {1}'.format(driver, e))
+                    continue
+                break
+
+        raise Exception('Failed to init display: No suitable video driver found!')
 
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
