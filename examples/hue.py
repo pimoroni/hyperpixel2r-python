@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import sys
+import signal
 import pygame
 import math
 from colorsys import hsv_to_rgb
@@ -50,6 +52,10 @@ class Hyperpixel2r:
             colour = tuple([int(c * 255) for c in hsv_to_rgb(a / 360.0, 1.0, 1.0)])
             pygame.draw.line(self.screen, colour, (ox, oy), (x, y), 3)
 
+    def _exit(self, sig, frame):
+        self._running = False
+        print("\nExiting!...\n")
+
     def _init_display(self):
         # Based on "Python GUI in Linux frame buffer"
         # http://www.karoltomala.com/blog/?p=679
@@ -60,7 +66,10 @@ class Hyperpixel2r:
         if os.getenv('SDL_VIDEODRIVER'):
             print("Using driver specified by SDL_VIDEODRIVER: {}".format(os.getenv('SDL_VIDEODRIVER')))
             pygame.display.init()
-            self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+            size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+            if size == (480, 480): # Fix for 480x480 mode offset
+                size = (640, 480)
+            self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE)
             return
 
         else:
@@ -70,7 +79,9 @@ class Hyperpixel2r:
                 try:
                     pygame.display.init()
                     size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-                    self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+                    if size == (480, 480):  # Fix for 480x480 mode offset
+                        size = (640, 480)
+                    self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE)
                     print("Using driver: {0}, Framebuffer size: {1:d} x {2:d}".format(driver, *size))
                     return
                 except pygame.error as e:
@@ -106,7 +117,17 @@ class Hyperpixel2r:
 
     def run(self):
         self._running = True
+        signal.signal(signal.SIGINT, self._exit)
         while self._running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self._running = False
+                    break
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self._running = False
+                        break
+
             self._colour = tuple([int(c * 255) for c in hsv_to_rgb(self._hue, 1.0, self._val)])
             pygame.draw.circle(self.screen, self.get_colour(), self.center, self.inner_radius - 10)
             pygame.draw.circle(self.screen, (0, 0, 0), self.center, self.inner_radius - 30)
@@ -122,6 +143,9 @@ class Hyperpixel2r:
 
             pygame.display.flip()
             self._clock.tick(30)
+
+        pygame.quit()
+        sys.exit(0)
 
 
 display = Hyperpixel2r()

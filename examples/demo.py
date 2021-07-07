@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import sys
+import signal
 import pygame
 import time
 import colorsys
@@ -67,6 +69,12 @@ class Hyperpixel2r:
         self.screen.fill((0, 0, 0))
         pygame.display.update()
 
+        self._running = False
+
+    def _exit(self, sig, frame):
+        self._running = False
+        print("\nExiting!...\n")
+
     def _init_display(self):
         # Based on "Python GUI in Linux frame buffer"
         # http://www.karoltomala.com/blog/?p=679
@@ -77,7 +85,10 @@ class Hyperpixel2r:
         if os.getenv('SDL_VIDEODRIVER'):
             print("Using driver specified by SDL_VIDEODRIVER: {}".format(os.getenv('SDL_VIDEODRIVER')))
             pygame.display.init()
-            self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+            size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
+            if size == (480, 480): # Fix for 480x480 mode offset
+                size = (640, 480)
+            self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE)
             return
 
         else:
@@ -87,7 +98,9 @@ class Hyperpixel2r:
                 try:
                     pygame.display.init()
                     size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-                    self.screen = pygame.display.set_mode((640, 480),  pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE, 16)
+                    if size == (480, 480):  # Fix for 480x480 mode offset
+                        size = (640, 480)
+                    self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.NOFRAME | pygame.HWSURFACE)
                     print("Using driver: {0}, Framebuffer size: {1:d} x {2:d}".format(driver, *size))
                     return
                 except pygame.error as e:
@@ -100,8 +113,19 @@ class Hyperpixel2r:
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
 
-    def demo(self):
-        while True:
+    def run(self):
+        self._running = True
+        signal.signal(signal.SIGINT, self._exit)
+        while self._running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self._running = False
+                    break
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self._running = False
+                        break
+
             t = int(time.time() * 40)
             for x in range(32):
                 for y in range(32):
@@ -112,6 +136,8 @@ class Hyperpixel2r:
                     pygame.draw.circle(self.screen, (r, g, b), ((x * 15) + 6, (y * 15) + 6 + 7), 7)
 
             pygame.display.flip()
+        pygame.quit()
+        sys.exit(0)
 
     def touch(self, x, y, state):
         pass
@@ -126,4 +152,4 @@ def handle_touch(touch_id, x, y, state):
     display.touch(x, y, state)
 
 
-display.demo()
+display.run()
