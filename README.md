@@ -23,6 +23,19 @@ Latest/development library from GitHub:
 * `cd hyperpixel2r-python`
 * `sudo ./install.sh`
 
+# SDL/Pygame on Raspberry Pi
+
+## pygame.error: No video mode large enough for 640x480
+
+The version of Pygame shipped with Raspberry Pi OS doesn't like non-standard resolutions like 480x480. You can fake a 640x480 standard display by forcing HDMI hotplug, and then just to a 480x480 region to display on HyperPixel 2.0" round. In `/boot/config.txt`:
+
+```text
+# Force 640x480 video for Pygame / HyperPixel2r
+hdmi_force_hotplug=1
+hdmi_mode=1
+hdmi_group=1
+```
+
 # Usage
 
 Set up touch driver instance:
