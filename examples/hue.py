@@ -23,7 +23,11 @@ class Hyperpixel2r:
         self._init_display()
 
         self.screen.fill((0, 0, 0))
-        pygame.display.update()
+
+        if self._rawfb:
+            self._updatefb()
+        else:
+            pygame.display.update()
 
         # For some reason the canvas needs a 7px vertical offset
         # circular screens are weird...
@@ -57,6 +61,7 @@ class Hyperpixel2r:
         print("\nExiting!...\n")
 
     def _init_display(self):
+        self._rawfb = False
         # Based on "Python GUI in Linux frame buffer"
         # http://www.karoltomala.com/blog/?p=679
         DISPLAY = os.getenv("DISPLAY")
@@ -89,10 +94,19 @@ class Hyperpixel2r:
                     continue
                 break
 
-        raise Exception('Failed to init display: No suitable video driver found!')
+        print("All SDL drivers failed, falling back to raw framebuffer access.")
+        self._rawfb = True
+        os.putenv('SDL_VIDEODRIVER', 'dummy')
+        pygame.display.init()  # Need to init for .convert() to work
+        self.screen = pygame.Surface((480, 480))
 
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
+
+    def _updatefb(self):
+        fbdev = os.getenv('SDL_FBDEV', '/dev/fb0')
+        with open(fbdev, 'wb') as fb:
+            fb.write(self.screen.convert(16, 0).get_buffer())
 
     def get_colour(self):
         return tuple([int(c * 255) for c in hsv_to_rgb(self._hue, 1.0, self._val)])
@@ -141,7 +155,10 @@ class Hyperpixel2r:
                 colour = tuple([int(c * 255) for c in hsv_to_rgb(self._hue, 1.0, a / 360.0)])
                 pygame.draw.line(self.screen, colour, (ox, oy), (x, y), 3)
 
-            pygame.display.flip()
+            if self._rawfb:
+                self._updatefb()
+            else:
+                pygame.display.flip()
             self._clock.tick(30)
 
         pygame.quit()

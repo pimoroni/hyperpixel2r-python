@@ -22,7 +22,7 @@ class Hyperpixel2r:
         self._init_display()
 
         self.screen.fill((0, 0, 0))        
-        pygame.display.update()
+        self._updatefb()
 
         self._step = 0
         self._steps = [
@@ -35,6 +35,7 @@ class Hyperpixel2r:
         self._touched = False
 
     def _init_display(self):
+        self._rawfb = False
         # Based on "Python GUI in Linux frame buffer"
         # http://www.karoltomala.com/blog/?p=679
         DISPLAY = os.getenv("DISPLAY")
@@ -67,10 +68,23 @@ class Hyperpixel2r:
                     continue
                 break
 
-        raise Exception('Failed to init display: No suitable video driver found!')
+        print("All SDL drivers failed, falling back to raw framebuffer access.")
+        self._rawfb = True
+        os.putenv('SDL_VIDEODRIVER', 'dummy')
+        pygame.display.init()  # Need to init for .convert() to work
+        self.screen = pygame.Surface((480, 480))
 
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
+
+    def _updatefb(self):
+        if not self._rawfb:
+            pygame.display.update()
+            return
+
+        fbdev = os.getenv('SDL_FBDEV', '/dev/fb0')
+        with open(fbdev, 'wb') as fb:
+            fb.write(self.screen.convert(16, 0).get_buffer())
 
     def touch(self, x, y, state):
         if state:
@@ -85,7 +99,7 @@ class Hyperpixel2r:
         for colour in [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0)]:
             self.screen.fill(colour)
             print("Displaying #{0:02x}{1:02x}{2:02x}".format(*colour))
-            pygame.display.update()
+            self._updatefb()
             time.sleep(0.25)
 
         for y in range(480):
@@ -93,21 +107,26 @@ class Hyperpixel2r:
             colour = tuple([int(c * 255) for c in hsv_to_rgb(hue, 1.0, 1.0)])
             pygame.draw.line(self.screen, colour, (0, y), (479, y))
 
-        pygame.display.update()
+        self._updatefb()
         time.sleep(1.0)
 
         while self._step < len(self._steps):
             r, g, b, x, y = self._steps[self._step]
             pygame.draw.circle(self.screen, (r, g, b), (x, y), 90)
-            pygame.display.update()
+            self._updatefb()
             t_start = time.time()
             while not self._touched:
                 if time.time() - t_start > timeout:
                     raise RuntimeError("Touch test timed out!")
             self._touched = False
             pygame.draw.circle(self.screen, (0, 0, 0), (x, y), 90)
-            pygame.display.update()
+
+            self._updatefb()
+
             self._step += 1
+
+        self.screen.fill((0, 0, 0))
+        self._updatefb()
 
 
 display = Hyperpixel2r()

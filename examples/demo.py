@@ -67,7 +67,10 @@ class Hyperpixel2r:
         self._init_display()
 
         self.screen.fill((0, 0, 0))
-        pygame.display.update()
+        if self._rawfb:
+            self._updatefb()
+        else:
+            pygame.display.update()
 
         self._running = False
 
@@ -76,6 +79,7 @@ class Hyperpixel2r:
         print("\nExiting!...\n")
 
     def _init_display(self):
+        self._rawfb = False
         # Based on "Python GUI in Linux frame buffer"
         # http://www.karoltomala.com/blog/?p=679
         DISPLAY = os.getenv("DISPLAY")
@@ -108,10 +112,19 @@ class Hyperpixel2r:
                     continue
                 break
 
-        raise Exception('Failed to init display: No suitable video driver found!')
+        print("All SDL drivers failed, falling back to raw framebuffer access.")
+        self._rawfb = True
+        os.putenv('SDL_VIDEODRIVER', 'dummy')
+        pygame.display.init()  # Need to init for .convert() to work
+        self.screen = pygame.Surface((480, 480))
 
     def __del__(self):
         "Destructor to make sure pygame shuts down, etc."
+
+    def _updatefb(self):
+        fbdev = os.getenv('SDL_FBDEV', '/dev/fb0')
+        with open(fbdev, 'wb') as fb:
+            fb.write(self.screen.convert(16, 0).get_buffer())
 
     def run(self):
         self._running = True
@@ -135,7 +148,10 @@ class Hyperpixel2r:
                     b = min(255, int(b))
                     pygame.draw.circle(self.screen, (r, g, b), ((x * 15) + 6, (y * 15) + 6 + 7), 7)
 
-            pygame.display.flip()
+            if self._rawfb:
+                self._updatefb()
+            else:
+                pygame.display.flip()
         pygame.quit()
         sys.exit(0)
 
