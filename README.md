@@ -7,7 +7,7 @@
 
 # Pre-requisites
 
-You must install the HyperPixel 2r drivers which enable an i2c bus for the touch IC - https://github.com/pimoroni/hyperpixel4/tree/hp2-round
+You must install the HyperPixel 2r drivers which enable an i2c bus for the touch IC - https://github.com/pimoroni/hyperpixel2r
 
 # Installing
 
