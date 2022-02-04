@@ -9,6 +9,14 @@
 
 You must install the HyperPixel 2r drivers which enable an i2c bus for the touch IC - https://github.com/pimoroni/hyperpixel2r
 
+Make sure you edit `/boot/config.txt` and add `:disable-touch` after `hyperpixel2r`, like so:
+
+```
+dtoverlay=hyperpixel2r:disable-touch
+```
+
+This disables the Linux touch driver so Python can talk to the touch IC.
+
 # Installing
 
 Stable library from PyPi:
